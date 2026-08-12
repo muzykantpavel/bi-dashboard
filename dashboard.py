@@ -5,6 +5,70 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 st.set_page_config(page_title="BI-дашборд VeroTrace", layout="wide")
+
+# ===================== CSS ДЛЯ КОРРЕКТНОГО ОТОБРАЖЕНИЯ ТЕКСТА =====================
+st.markdown("""
+<style>
+    .stMarkdown div {
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+    }
+    .risk-card {
+        padding: 14px 18px !important;
+        border-radius: 8px !important;
+        margin-bottom: 10px !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    .risk-card-critical {
+        background: #ffebee !important;
+        border-left: 6px solid #d32f2f !important;
+    }
+    .risk-card-high {
+        background: #fff3e0 !important;
+        border-left: 6px solid #f57c00 !important;
+    }
+    .risk-card-medium {
+        background: #fff8e1 !important;
+        border-left: 6px solid #fbc02d !important;
+    }
+    .risk-badge {
+        background: #d32f2f;
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 14px;
+        border-radius: 20px;
+        margin-left: 10px;
+        display: inline-block;
+    }
+    .risk-badge-high {
+        background: #f57c00;
+    }
+    .risk-badge-medium {
+        background: #fbc02d;
+        color: #333;
+    }
+    .kpi-card {
+        background: #f0f2f6;
+        border-radius: 10px;
+        padding: 14px 16px;
+        text-align: center;
+        border-left: 4px solid #1f77b4;
+    }
+    .kpi-label {
+        font-size: 0.8rem;
+        color: #555;
+    }
+    .kpi-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1f77b4;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("📊 Оценка DWH/BI для VeroTrace")
 st.caption("Сроки, бюджет и риски проекта | Данные на основе ТЗ от 12.08.2026")
 
@@ -60,15 +124,15 @@ df_risks = pd.DataFrame({
     "Уровень": ["Критический", "Критический", "Высокий", "Высокий", "Высокий", "Средний", "Средний", "Средний", "Средний", "Средний"],
     "Мера": [
         "Начинать трекинг параллельно с DWH. Жёстко зафиксировать структуру событий на Discovery.",
-        "На этапе Discovery проверить все ключи связки (user_id, device_id, phone).",
-        "Зафиксировать определения метрик в Discovery. Согласовать с бизнесом до старта.",
-        "Ввести ретраи с экспоненциальной задержкой. Настроить алерты.",
-        "Вести документацию и код-ревью. Настроить cross-training.",
-        "Начать с Metabase (self-hosted). При росте — перейти на ClickHouse.",
-        "Демо-сессии после каждой волны. Выкатывать MVP даже с неполными метриками.",
-        "Добавить валидацию на ETL. Сделать Data Quality Dashboard.",
-        "Заложить буфер 15–20%. Чётко определить FTE.",
-        "Шифрование при передаче. Доступ по ролям (RBAC). Логирование."
+        "На этапе Discovery проверить все ключи связки (user_id, device_id, phone). Если не хватает — разработать маппинг-таблицу.",
+        "Зафиксировать определения метрик в Discovery. Согласовать с бизнесом до старта разработки.",
+        "Ввести ретраи с экспоненциальной задержкой. Настроить алерты при падении API.",
+        "Вести документацию и код-ревью с самого начала. Настроить cross-training команды.",
+        "Начать с Metabase (self-hosted) — минимальные затраты. При росте — масштабироваться.",
+        "Проводить демо-сессии после каждой волны. Выкатывать MVP даже с неполными метриками.",
+        "Добавить валидацию на этапе ETL (проверка на NULL, дубли, выбросы). Сделать Data Quality Dashboard.",
+        "Заложить буфер 15–20% в график. Чётко определить загрузку (FTE) для каждого специалиста.",
+        "Использовать шифрование при передаче (HTTPS, SSL). Доступ к дашбордам — строго по ролям (RBAC)."
     ]
 })
 df_risks["Score"] = df_risks["Вероятность"] * df_risks["Влияние"]
@@ -83,7 +147,7 @@ df_risks["Цвет"] = df_risks["Уровень"].map({
 infra_min = 20000
 infra_max = 100000
 
-# ===================== БОКОВАЯ ПАНЕЛЬ (ТОЛЬКО ВЫБОР ПРОЕКТА) =====================
+# ===================== БОКОВАЯ ПАНЕЛЬ =====================
 st.sidebar.header("⚙️ Настройки")
 option = st.sidebar.radio(
     "Выберите вариант проекта",
@@ -100,16 +164,52 @@ months_max = selected["Срок_мес_макс"]
 # ===================== KPI =====================
 st.subheader("📌 Ключевые показатели")
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("📅 Срок", f"{months_min}–{months_max} мес")
-col2.metric("💰 Бюджет команды", f"{budget_min/1e6:.1f}–{budget_max/1e6:.1f} млн ₽")
-col3.metric("🖥️ Инфраструктура (в мес)", f"{infra_min/1000:.0f}–{infra_max/1000:.0f} тыс. ₽")
-col4.metric("📊 Дашбордов", f"{3 if option == 'MVP' else 9}")
-col5.metric("👥 Команда", f"{3 if option == 'MVP' else 5}")
+
+with col1:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">📅 Срок</div>
+        <div class="kpi-value">{months_min}–{months_max} мес</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">💰 Бюджет команды</div>
+        <div class="kpi-value">{budget_min/1e6:.1f}–{budget_max/1e6:.1f} млн ₽</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">🖥️ Инфраструктура (в мес)</div>
+        <div class="kpi-value">{infra_min/1000:.0f}–{infra_max/1000:.0f} тыс. ₽</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">📊 Дашбордов</div>
+        <div class="kpi-value">{3 if option == 'MVP' else 9}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col5:
+    st.markdown(f"""
+    <div class="kpi-card">
+        <div class="kpi-label">👥 Команда</div>
+        <div class="kpi-value">{3 if option == 'MVP' else 5}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.divider()
 
 # ===================== ГРАФИК 1: Бюджет по ролям =====================
 st.subheader("💰 Бюджет команды по ролям")
+
 fig1 = px.bar(
     df_team,
     x="Роль",
@@ -121,11 +221,17 @@ fig1 = px.bar(
     text_auto=".2s"
 )
 fig1.update_traces(textposition="outside")
-fig1.update_layout(height=450, yaxis_tickformat=",.0f", hovermode="x")
+fig1.update_layout(
+    height=450,
+    yaxis_tickformat=",.0f",
+    hovermode="x",
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
 st.plotly_chart(fig1, use_container_width=True)
 
 # ===================== ГРАФИК 2: Сравнение MVP vs Full =====================
 st.subheader("⚖️ Сравнение MVP и Полного проекта")
+
 fig2 = go.Figure()
 fig2.add_trace(go.Bar(
     x=df_options["Вариант"],
@@ -143,20 +249,23 @@ fig2.add_trace(go.Bar(
     text=[f"{v/1e6:.1f}M" for v in df_options["Бюджет_макс"]],
     textposition="outside"
 ))
+
 for i, row in df_options.iterrows():
     fig2.add_annotation(
         x=row["Вариант"],
         y=row["Бюджет_макс"] + 300000,
         text=f"⏱ {row['Срок_мес_мин']}–{row['Срок_мес_макс']} мес",
         showarrow=False,
-        font=dict(size=12)
+        font=dict(size=12, color="#333")
     )
+
 fig2.update_layout(
     title="Бюджет команды по вариантам проекта",
     yaxis_title="Рубли",
     barmode="group",
     height=400,
-    yaxis_tickformat=",.0f"
+    yaxis_tickformat=",.0f",
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 st.plotly_chart(fig2, use_container_width=True)
 
@@ -184,6 +293,7 @@ for i, row in df_gantt.iterrows():
                       f"Срок: {row['Недель_мин']}–{row['Недель_макс']} нед<br>"
                       f"Зависит: {row['Зависимости']}<extra></extra>"
     ))
+
 fig3.update_layout(
     title="Этапы проекта с зависимостями",
     xaxis_title="Дата",
@@ -224,6 +334,7 @@ fig4.add_trace(go.Scatter(
     fill="tonexty",
     fillcolor="rgba(255, 127, 14, 0.15)"
 ))
+
 fig4.add_vline(
     x=active_months,
     line_dash="dash",
@@ -231,6 +342,7 @@ fig4.add_vline(
     annotation_text=f"🏁 Окончание ({option})",
     annotation_position="top right"
 )
+
 for i, row in df_infra.iterrows():
     fig4.add_annotation(
         x=row["Месяц"],
@@ -239,13 +351,20 @@ for i, row in df_infra.iterrows():
         showarrow=False,
         font=dict(size=10, color="#ff7f0e")
     )
+
 fig4.update_layout(
     title=f"Инфраструктурные затраты по месяцам (проект: {option})",
     xaxis_title="Месяц проекта",
     yaxis_title="Рубли",
     height=400,
     yaxis_tickformat=",.0f",
-    hovermode="x unified"
+    hovermode="x unified",
+    xaxis=dict(
+        range=[0.5, 7.5],
+        dtick=1,
+        tick0=1
+    ),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 st.plotly_chart(fig4, use_container_width=True)
 
@@ -261,10 +380,11 @@ with col_risk_left:
     critical_risks = df_risks[df_risks["Уровень"] == "Критический"]
     for _, row in critical_risks.iterrows():
         st.markdown(f"""
-        <div style="background:#ffebee; border-left:6px solid #d32f2f; padding:12px 16px; border-radius:6px; margin-bottom:8px;">
-            <b style="color:#d32f2f;">{row['ID']}</b> — {row['Риск']}
-            <span style="background:#d32f2f; color:white; font-size:0.7rem; font-weight:600; padding:2px 12px; border-radius:20px; margin-left:10px;">КРИТИЧЕСКИЙ</span>
-            <br><span style="font-size:0.85rem; color:#555;">✅ {row['Мера']}</span>
+        <div style="background:#ffebee; border-left:6px solid #d32f2f; padding:14px 18px; border-radius:8px; margin-bottom:10px; word-wrap:break-word; overflow-wrap:break-word;">
+            <b style="color:#d32f2f; font-size:1.05rem;">{row['ID']}</b>
+            <span style="font-weight:500;">— {row['Риск']}</span>
+            <span style="background:#d32f2f; color:white; font-size:0.65rem; font-weight:700; padding:2px 14px; border-radius:20px; margin-left:10px; display:inline-block;">КРИТИЧЕСКИЙ</span>
+            <br><span style="font-size:0.9rem; color:#333; display:block; margin-top:6px;">✅ {row['Мера']}</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -272,10 +392,11 @@ with col_risk_left:
     high_risks = df_risks[df_risks["Уровень"] == "Высокий"]
     for _, row in high_risks.iterrows():
         st.markdown(f"""
-        <div style="background:#fff3e0; border-left:6px solid #f57c00; padding:10px 14px; border-radius:6px; margin-bottom:6px;">
-            <b style="color:#f57c00;">{row['ID']}</b> — {row['Риск']}
-            <span style="background:#f57c00; color:white; font-size:0.7rem; font-weight:600; padding:2px 12px; border-radius:20px; margin-left:10px;">ВЫСОКИЙ</span>
-            <br><span style="font-size:0.85rem; color:#555;">✅ {row['Мера']}</span>
+        <div style="background:#fff3e0; border-left:6px solid #f57c00; padding:12px 16px; border-radius:6px; margin-bottom:8px; word-wrap:break-word; overflow-wrap:break-word;">
+            <b style="color:#f57c00; font-size:1.0rem;">{row['ID']}</b>
+            <span style="font-weight:500;">— {row['Риск']}</span>
+            <span style="background:#f57c00; color:white; font-size:0.65rem; font-weight:700; padding:2px 14px; border-radius:20px; margin-left:10px; display:inline-block;">ВЫСОКИЙ</span>
+            <br><span style="font-size:0.9rem; color:#333; display:block; margin-top:6px;">✅ {row['Мера']}</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -311,7 +432,8 @@ with col_risk_right:
         height=350,
         xaxis=dict(range=[0.5, 5.5], title="Вероятность"),
         yaxis=dict(range=[0.5, 5.5], title="Влияние"),
-        showlegend=True
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
     st.plotly_chart(fig_risk, use_container_width=True)
 
@@ -329,12 +451,16 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 with tab1:
     st.dataframe(df_team, use_container_width=True, hide_index=True)
+
 with tab2:
     st.dataframe(df_options, use_container_width=True, hide_index=True)
+
 with tab3:
     st.dataframe(df_stages, use_container_width=True, hide_index=True)
+
 with tab4:
     st.dataframe(df_infra, use_container_width=True, hide_index=True)
+
 with tab5:
     st.dataframe(df_risks[["ID", "Риск", "Вероятность", "Влияние", "Уровень", "Мера"]], use_container_width=True, hide_index=True)
 
