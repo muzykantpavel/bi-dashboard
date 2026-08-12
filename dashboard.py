@@ -6,49 +6,13 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="BI-дашборд VeroTrace", layout="wide")
 
-# ===================== CSS ДЛЯ КОРРЕКТНОГО ОТОБРАЖЕНИЯ ТЕКСТА =====================
+# ===================== CSS =====================
 st.markdown("""
 <style>
     .stMarkdown div {
         word-wrap: break-word !important;
         overflow-wrap: break-word !important;
         white-space: normal !important;
-    }
-    .risk-card {
-        padding: 14px 18px !important;
-        border-radius: 8px !important;
-        margin-bottom: 10px !important;
-        word-wrap: break-word !important;
-        overflow-wrap: break-word !important;
-    }
-    .risk-card-critical {
-        background: #ffebee !important;
-        border-left: 6px solid #d32f2f !important;
-    }
-    .risk-card-high {
-        background: #fff3e0 !important;
-        border-left: 6px solid #f57c00 !important;
-    }
-    .risk-card-medium {
-        background: #fff8e1 !important;
-        border-left: 6px solid #fbc02d !important;
-    }
-    .risk-badge {
-        background: #d32f2f;
-        color: white;
-        font-size: 0.65rem;
-        font-weight: 700;
-        padding: 2px 14px;
-        border-radius: 20px;
-        margin-left: 10px;
-        display: inline-block;
-    }
-    .risk-badge-high {
-        background: #f57c00;
-    }
-    .risk-badge-medium {
-        background: #fbc02d;
-        color: #333;
     }
     .kpi-card {
         background: #f0f2f6;
@@ -65,6 +29,105 @@ st.markdown("""
         font-size: 1.4rem;
         font-weight: 700;
         color: #1f77b4;
+    }
+    /* ===== КАРТОЧКИ РИСКОВ — ТЕПЕРЬ ТЕКСТ ЧЁТКО ВИДЕН ===== */
+    .risk-critical {
+        background: #ffebee;
+        border-left: 6px solid #b71c1c;
+        padding: 14px 18px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .risk-critical .risk-id {
+        color: #b71c1c;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+    .risk-critical .risk-name {
+        color: #1a1a1a;
+        font-weight: 500;
+    }
+    .risk-critical .risk-badge {
+        background: #b71c1c;
+        color: #ffffff;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 14px;
+        border-radius: 20px;
+        margin-left: 10px;
+        display: inline-block;
+    }
+    .risk-critical .risk-measure {
+        color: #1a1a1a;
+        font-size: 0.9rem;
+        display: block;
+        margin-top: 6px;
+    }
+
+    .risk-high {
+        background: #fff3e0;
+        border-left: 6px solid #e65100;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    .risk-high .risk-id {
+        color: #e65100;
+        font-size: 1.0rem;
+        font-weight: 700;
+    }
+    .risk-high .risk-name {
+        color: #1a1a1a;
+        font-weight: 500;
+    }
+    .risk-high .risk-badge {
+        background: #e65100;
+        color: #ffffff;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 14px;
+        border-radius: 20px;
+        margin-left: 10px;
+        display: inline-block;
+    }
+    .risk-high .risk-measure {
+        color: #1a1a1a;
+        font-size: 0.9rem;
+        display: block;
+        margin-top: 6px;
+    }
+
+    .risk-medium {
+        background: #fff8e1;
+        border-left: 6px solid #f9a825;
+        padding: 10px 14px;
+        border-radius: 6px;
+        margin-bottom: 6px;
+    }
+    .risk-medium .risk-id {
+        color: #f57f17;
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+    .risk-medium .risk-name {
+        color: #1a1a1a;
+        font-weight: 500;
+    }
+    .risk-medium .risk-badge {
+        background: #f9a825;
+        color: #1a1a1a;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 14px;
+        border-radius: 20px;
+        margin-left: 10px;
+        display: inline-block;
+    }
+    .risk-medium .risk-measure {
+        color: #1a1a1a;
+        font-size: 0.9rem;
+        display: block;
+        margin-top: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -136,12 +199,6 @@ df_risks = pd.DataFrame({
     ]
 })
 df_risks["Score"] = df_risks["Вероятность"] * df_risks["Влияние"]
-df_risks["Цвет"] = df_risks["Уровень"].map({
-    "Критический": "#d32f2f",
-    "Высокий": "#f57c00",
-    "Средний": "#fbc02d",
-    "Низкий": "#388e3c"
-})
 
 # 5. Инфраструктура
 infra_min = 20000
@@ -305,7 +362,7 @@ fig3.update_layout(
 )
 st.plotly_chart(fig3, use_container_width=True)
 
-# ===================== ГРАФИК 4: Инфраструктура (ИСПРАВЛЕН) =====================
+# ===================== ГРАФИК 4: Инфраструктура =====================
 st.subheader("🖥️ Инфраструктурные расходы")
 
 max_months_full = 7
@@ -376,30 +433,33 @@ st.caption("Оценка рисков по вероятности и влиян�
 col_risk_left, col_risk_right = st.columns([2, 1])
 
 with col_risk_left:
+    # ===== КРИТИЧЕСКИЕ РИСКИ =====
     st.markdown("#### 🔴 Критические риски (требуют немедленного внимания)")
     critical_risks = df_risks[df_risks["Уровень"] == "Критический"]
     for _, row in critical_risks.iterrows():
         st.markdown(f"""
-        <div style="background:#ffebee; border-left:6px solid #d32f2f; padding:14px 18px; border-radius:8px; margin-bottom:10px; word-wrap:break-word; overflow-wrap:break-word;">
-            <b style="color:#d32f2f; font-size:1.05rem;">{row['ID']}</b>
-            <span style="font-weight:500;">— {row['Риск']}</span>
-            <span style="background:#d32f2f; color:white; font-size:0.65rem; font-weight:700; padding:2px 14px; border-radius:20px; margin-left:10px; display:inline-block;">КРИТИЧЕСКИЙ</span>
-            <br><span style="font-size:0.9rem; color:#333; display:block; margin-top:6px;">✅ {row['Мера']}</span>
+        <div class="risk-critical">
+            <span class="risk-id">{row['ID']}</span>
+            <span class="risk-name">— {row['Риск']}</span>
+            <span class="risk-badge">КРИТИЧЕСКИЙ</span>
+            <span class="risk-measure">✅ {row['Мера']}</span>
         </div>
         """, unsafe_allow_html=True)
 
+    # ===== ВЫСОКИЕ РИСКИ =====
     st.markdown("#### 🟠 Высокие риски")
     high_risks = df_risks[df_risks["Уровень"] == "Высокий"]
     for _, row in high_risks.iterrows():
         st.markdown(f"""
-        <div style="background:#fff3e0; border-left:6px solid #f57c00; padding:12px 16px; border-radius:6px; margin-bottom:8px; word-wrap:break-word; overflow-wrap:break-word;">
-            <b style="color:#f57c00; font-size:1.0rem;">{row['ID']}</b>
-            <span style="font-weight:500;">— {row['Риск']}</span>
-            <span style="background:#f57c00; color:white; font-size:0.65rem; font-weight:700; padding:2px 14px; border-radius:20px; margin-left:10px; display:inline-block;">ВЫСОКИЙ</span>
-            <br><span style="font-size:0.9rem; color:#333; display:block; margin-top:6px;">✅ {row['Мера']}</span>
+        <div class="risk-high">
+            <span class="risk-id">{row['ID']}</span>
+            <span class="risk-name">— {row['Риск']}</span>
+            <span class="risk-badge">ВЫСОКИЙ</span>
+            <span class="risk-measure">✅ {row['Мера']}</span>
         </div>
         """, unsafe_allow_html=True)
 
+    # ===== СРЕДНИЕ РИСКИ (в свёрнутом виде) =====
     with st.expander("📋 Показать все риски (полная матрица)"):
         st.dataframe(
             df_risks[["ID", "Риск", "Вероятность", "Влияние", "Уровень", "Мера"]],
